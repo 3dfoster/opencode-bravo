@@ -44,6 +44,7 @@ import { formatDuration } from "../../util/format"
 import { createColors, createFrames } from "../../ui/spinner"
 import { useDialog } from "../../ui/dialog"
 import { DialogProvider as DialogProviderConnect } from "../dialog-provider"
+import { Sidebar } from "../../routes/session/sidebar"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
@@ -1465,6 +1466,14 @@ export function Prompt(props: PromptProps) {
                   )}
                 </Show>
               </box>
+              <Show when={status().type !== "idle"}>
+                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                  esc{" "}
+                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
+                  </span>
+                </text>
+              </Show>
               <Show when={hasRightContent()}>
                 <box flexDirection="row" gap={1} alignItems="center">
                   {props.right}
@@ -1573,12 +1582,6 @@ export function Prompt(props: PromptProps) {
                     })()}
                   </box>
                 </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
               </box>
             </Match>
             <Match when={workspace.notice()}>
@@ -1634,7 +1637,10 @@ export function Prompt(props: PromptProps) {
             <Match when={true}>{props.hint ?? <text />}</Match>
           </Switch>
           <Show when={status().type !== "retry"}>
-            <box gap={2} flexDirection="row">
+            <box gap={2} flexDirection="row" flexGrow={1} justifyContent="space-between">
+              <Show when={props.sessionID}>
+                {(sessionID) => <Sidebar sessionID={sessionID()} />}
+              </Show>
               <Show when={editorContextLabelState() !== "none" ? editorFileLabelDisplay() : undefined}>
                 {(file) => (
                   <text fg={editorContextLabelState() === "pending" ? theme.secondary : theme.textMuted}>{file()}</text>
@@ -1642,20 +1648,11 @@ export function Prompt(props: PromptProps) {
               </Show>
               <Switch>
                 <Match when={store.mode === "normal"}>
-                  <Switch>
-                    <Match when={usage()}>
-                      {(item) => (
-                        <text fg={theme.textMuted} wrapMode="none">
-                          {[item().context, item().cost].filter(Boolean).join(" · ")}
-                        </text>
-                      )}
-                    </Match>
-                    <Match when={true}>
-                      <text fg={theme.text}>
-                        {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
-                      </text>
-                    </Match>
-                  </Switch>
+                  <Show when={!usage()}>
+                    <text fg={theme.text}>
+                      {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
+                    </text>
+                  </Show>
                   <text fg={theme.text}>
                     {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
                   </text>

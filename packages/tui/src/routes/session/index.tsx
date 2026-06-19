@@ -53,7 +53,6 @@ import { DialogConfirm } from "../../ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
-import { Sidebar } from "./sidebar"
 import { SubagentFooter } from "./subagent-footer.tsx"
 import { filetype } from "../../util/filetype"
 import parsers from "../../parsers-config"
@@ -119,7 +118,6 @@ const sessionBindingCommands = [
   "session.unshare",
   "session.undo",
   "session.redo",
-  "session.sidebar.toggle",
   "session.toggle.conceal",
   "session.toggle.timestamps",
   "session.toggle.thinking",
@@ -248,8 +246,6 @@ export function Session() {
   })
 
   const dimensions = useTerminalDimensions()
-  const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
-  const [sidebarOpen, setSidebarOpen] = createSignal(false)
   const [conceal, setConceal] = createSignal(true)
   const thinking = useThinkingMode()
   const thinkingMode = thinking.mode
@@ -262,15 +258,8 @@ export function Session() {
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
-  const wide = createMemo(() => dimensions().width > 120)
-  const sidebarVisible = createMemo(() => {
-    if (session()?.parentID) return false
-    if (sidebarOpen()) return true
-    if (sidebar() === "auto" && wide()) return true
-    return false
-  })
   const showTimestamps = createMemo(() => timestamps() === "show")
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+  const contentWidth = createMemo(() => dimensions().width - 4)
   const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
@@ -338,6 +327,31 @@ export function Session() {
   let seeded = false
   let scroll: ScrollBoxRenderable
   let prompt: PromptRef | undefined
+  let container: BoxRenderable
+
+  createEffect(() => {
+    if (!scroll || scroll.isDestroyed) return
+    const handleWheel = (event: { deltaY: number; preventDefault: () => void }) => {
+      event.preventDefault()
+      scroll.scrollBy(event.deltaY > 0 ? 3 : -3)
+    }
+    scroll.on("wheel", handleWheel)
+    onCleanup(() => {
+      scroll.off("wheel", handleWheel)
+    })
+  })
+
+  createEffect(() => {
+    if (!container || container.isDestroyed) return
+    const handleWheel = (event: { deltaY: number; preventDefault: () => void }) => {
+      event.preventDefault()
+      scroll.scrollBy(event.deltaY > 0 ? 3 : -3)
+    }
+    container.on("wheel", handleWheel)
+    onCleanup(() => {
+      container.off("wheel", handleWheel)
+    })
+  })
   const bind = (r: PromptRef | undefined) => {
     prompt = r
     promptRef.set(r)
@@ -662,18 +676,6 @@ export function Session() {
         void sdk.client.session.revert({
           sessionID: route.sessionID,
           messageID: message.id,
-        })
-      },
-    },
-    {
-      title: sidebarVisible() ? "Hide sidebar" : "Show sidebar",
-      value: "session.sidebar.toggle",
-      category: "Session",
-      run: () => {
-        batch(() => {
-          const isVisible = sidebarVisible()
-          setSidebar(() => (isVisible ? "hide" : "auto"))
-          setSidebarOpen(!isVisible)
         })
         dialog.clear()
       },
@@ -1166,7 +1168,15 @@ export function Session() {
         }}
       >
         <box flexDirection="row" flexGrow={1} minHeight={0}>
-          <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
+          <box
+            ref={(r) => (container = r)}
+            flexGrow={1}
+            minHeight={0}
+            paddingBottom={1}
+            paddingLeft={2}
+            paddingRight={2}
+            gap={1}
+          >
             <Show when={session()}>
               <scrollbox
                 ref={(r) => (scroll = r)}
@@ -1324,26 +1334,6 @@ export function Session() {
             </Show>
             <Toast />
           </box>
-          <Show when={sidebarVisible()}>
-            <Switch>
-              <Match when={wide()}>
-                <Sidebar sessionID={route.sessionID} />
-              </Match>
-              <Match when={!wide()}>
-                <box
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  right={0}
-                  bottom={0}
-                  alignItems="flex-end"
-                  backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
-                >
-                  <Sidebar sessionID={route.sessionID} />
-                </box>
-              </Match>
-            </Switch>
-          </Show>
         </box>
       </context.Provider>
     </PathFormatterProvider>

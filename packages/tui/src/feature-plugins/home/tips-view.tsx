@@ -36,7 +36,6 @@ type Shortcuts = {
   sessionPinToggle: TipShortcut
   sessionQuickSwitch1: TipShortcut
   sessionQuickSwitch9: TipShortcut
-  sessionSidebarToggle: TipShortcut
   sessionTimeline: TipShortcut
   statusView: TipShortcut
   terminalSuspend: TipShortcut
@@ -126,7 +125,6 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     sessionPinToggle: configShortcut(props.api, "session.pin.toggle"),
     sessionQuickSwitch1: useCommandShortcut("session.quick_switch.1"),
     sessionQuickSwitch9: useCommandShortcut("session.quick_switch.9"),
-    sessionSidebarToggle: configShortcut(props.api, "session.sidebar.toggle"),
     sessionTimeline: configShortcut(props.api, "session.timeline"),
     statusView: useCommandShortcut("opencode.status"),
     terminalSuspend: useCommandShortcut("terminal.suspend"),
@@ -188,7 +186,6 @@ const TIPS: Tip[] = [
   "Run {highlight}/connect{/highlight} to add API keys for 75+ supported LLM providers",
   (shortcuts) => `The leader key is ${shortcutText(shortcuts.leader())}; combine with other keys for quick actions`,
   (shortcuts) => press(shortcuts.modelCycleRecent(), "to quickly switch between recently used models"),
-  (shortcuts) => press(shortcuts.sessionSidebarToggle(), "in a session to show or hide the sidebar panel"),
   (shortcuts) =>
     shortcuts.messagesPageUp() && shortcuts.messagesPageDown()
       ? `Use ${shortcutText(shortcuts.messagesPageUp())}/${shortcutText(shortcuts.messagesPageDown())} to navigate through conversation history`
