@@ -156,3 +156,102 @@ const table = sqliteTable("session", {
 - Keep delivery vocabulary explicit. Prompts steer by default and coalesce into the active activity at the next safe provider-turn boundary. Explicit `queue` inputs open FIFO future activities one at a time after the active activity settles.
 - Keep EventV2 replay owner claims separate from clustered Session execution ownership.
 - Keep the System Context algebra, registry, and built-ins in `src/system-context`; keep Context Source producers with their observed domains, and keep Session History selection plus Context Epoch persistence Session-owned.
+
+## Bravocode fork
+
+This is a local UX-focused fork of OpenCode. The official `opencode`
+binary in `~/.opencode/bin` remains untouched; our build is exposed as
+a separate command so the two coexist without colliding.
+
+### Naming
+
+- Fork name: **bravocode**. Use `bravocode` for the user-facing
+  launcher, internal references in docs, and any future-visible
+  strings you control.
+- The package itself still installs as `opencode-ai` on registries;
+  only the launcher alias is renamed.
+
+### Toolchain
+
+- Bun is required. Install once with `curl -fsSL https://bun.sh/install | bash`.
+  It lands at `~/.bun/bin/bun`; add to `PATH` in `~/.bashrc`:
+  ```
+  export PATH="$HOME/.bun/bin:$PATH"
+  ```
+- `tree-sitter-powershell`'s `node-gyp` rebuild step fails on this
+  host. Use `bun install --frozen-lockfile --ignore-scripts` for the
+  workspace; missing cross-platform natives (parcel-watcher,
+  fff-bun) are pulled separately by the build script.
+
+### Build pipeline
+
+From the workspace root, with bun on `PATH`:
+
+```
+bun install --frozen-lockfile --ignore-scripts
+bun --cwd packages/opencode run build --single --skip-install
+```
+
+- `--single` builds only the current OS/arch binary, instead of every
+  target listed in `packages/opencode/script/build.ts`.
+- `--skip-install` skips the `bun install --os='*' --cpu='*'`
+  cross-platform native re-resolve that has been failing here.
+- Output:
+  `packages/opencode/dist/opencode-<os>-<arch>/bin/opencode`.
+- A smoke test (`${binaryPath} --version`) runs as the last step.
+
+### Local install (keeps official `opencode` intact)
+
+```
+ln -sf "$PWD/packages/opencode/dist/opencode-linux-x64/bin/opencode" \
+       "$HOME/.local/bin/bravocode"
+```
+
+`~/.local/bin` already appears earlier than `~/.opencode/bin` on
+PATH, so `bravocode` overrides `opencode` only for the caller that
+invokes the new binary. If `which opencode` still resolves to the
+official binary, that is expected and correct.
+
+### Environment knobs (set in `~/.bashrc`)
+
+- `OPENCODE_DISABLE_AUTOUPDATE=true` — Suppresses the version-check
+  network call and the "Update Available" dialog. Keep this on
+  during fork development. To upgrade, rebuild locally instead of
+  running `bravocode upgrade`.
+
+### Editing the TUI
+
+- TUI sources: `packages/tui/src`.
+- Bottom status/details row: `packages/tui/src/component/prompt/index.tsx`.
+- The session-title + sidebar slot row in the footer is
+  `packages/tui/src/routes/session/sidebar.tsx`. The right-side
+  panel it once lived in has been removed from
+  `packages/tui/src/routes/session/index.tsx`; do not reintroduce
+  a full-height panel column without checking layout
+  compatibility.
+- Sidebar `sidebar_content` plugins live in
+  `packages/tui/src/feature-plugins/sidebar/`. Trim there if the
+  footer row grows too dense.
+- The orphaned `routes/session/footer.tsx` (directory/LSP/MCP row)
+  is intentionally not mounted. Wire it up before reintroducing
+  that view.
+
+### Verifying changes
+
+- `bun typecheck` per package directory. `tsgo` will surface
+  pre-existing errors in unrelated files; focus on the files you
+  touched.
+- After TUI edits, rebuild:
+  `bun --cwd packages/opencode run build --single --skip-install`.
+- Launch with `bravocode`. Confirm PATH drift with
+  `opencode --version` vs. `bravocode --version` if you suspect
+  overlap.
+
+### What NOT to do
+
+- Do **not** run `bravocode upgrade`. The install-method detector
+  in `packages/opencode/src/installation/index.ts` treats
+  `~/.local/bin` as `curl` and would fetch the upstream installer,
+  overwriting the symlink with the official binary. The fork
+  uses local rebuilds instead.
+

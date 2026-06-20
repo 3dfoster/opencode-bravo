@@ -17,7 +17,7 @@ import { useTuiConfig } from "../../config"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
 
-type PermissionStage = "permission" | "always" | "reject"
+type PermissionStage = "permission" | "reject"
 
 function EditBody(props: { request: PermissionRequest }) {
   const themeState = useTheme()

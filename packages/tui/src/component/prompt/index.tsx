@@ -1466,19 +1466,25 @@ export function Prompt(props: PromptProps) {
                   )}
                 </Show>
               </box>
-              <Show when={status().type !== "idle"}>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
-              </Show>
-              <Show when={hasRightContent()}>
-                <box flexDirection="row" gap={1} alignItems="center">
+              <box flexDirection="row" gap={2} alignItems="center">
+                <Show when={status().type !== "idle"}>
+                  <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                    esc{" "}
+                    <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                      {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
+                    </span>
+                  </text>
+                  <Show
+                    when={kv.get("animations_enabled", true)}
+                    fallback={<text fg={theme.textMuted}>[⋯]</text>}
+                  >
+                    <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
+                  </Show>
+                </Show>
+                <Show when={hasRightContent()}>
                   {props.right}
-                </box>
-              </Show>
+                </Show>
+              </box>
             </box>
           </box>
         </box>
@@ -1518,11 +1524,6 @@ export function Prompt(props: PromptProps) {
                 justifyContent={status().type === "retry" ? "space-between" : "flex-start"}
               >
                 <box flexShrink={0} flexDirection="row" gap={1}>
-                  <box marginLeft={1}>
-                    <Show when={kv.get("animations_enabled", true)} fallback={<text fg={theme.textMuted}>[⋯]</text>}>
-                      <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-                    </Show>
-                  </box>
                   <box flexDirection="row" gap={1} flexShrink={0}>
                     {(() => {
                       const retry = createMemo(() => {
